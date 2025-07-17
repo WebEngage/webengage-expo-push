@@ -1,4 +1,4 @@
-# 📲 webengage-expo
+# 📲 webengage-expo-push
 
 **An Expo Config Plugin to integrate WebEngage into your Expo app.**
 
