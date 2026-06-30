@@ -38,13 +38,12 @@ const withEasManagedCredentials: ConfigPlugin<WebEngagePluginProps> = (
   return config;
 };
 
-const withWebEngagePodfile: ConfigPlugin<WebEngagePluginProps> = (config) => {
+const withWebEngagePodfile: ConfigPlugin<WebEngagePluginProps> = (config, props) => {
   return withDangerousMod(config, [
     "ios",
     async (config) => {
-      // not awaiting in order to not block main thread
       const iosRoot = path.join(config.modRequest.projectRoot, "ios");
-      updatePodfile(iosRoot).catch((err) => {
+      updatePodfile(iosRoot, props?.useSPM).catch((err) => {
         WebEngageLog.error(err);
       });
 
@@ -371,6 +370,158 @@ const withWebEngageXcodeProjectContentExtension: ConfigPlugin<
   });
 };
 
+const WE_SERVICE_EXT_SPM_URL = "https://github.com/WebEngage/WEServiceExtension.git";
+const WE_CONTENT_EXT_SPM_URL = "https://github.com/WebEngage/WEContentExtension.git";
+const WE_SERVICE_EXT_VERSION = "1.3.0";
+const WE_CONTENT_EXT_VERSION = "1.1.3";
+
+const withWebEngageExtensionsSPM: ConfigPlugin<WebEngagePluginProps> = (
+  config,
+  props
+) => {
+  return withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const { projectRoot } = config.modRequest;
+      const iosPath = path.join(projectRoot, "ios");
+      const projectName = getProjectName(iosPath);
+      const pbxprojPath = path.join(
+        iosPath,
+        `${projectName}.xcodeproj`,
+        "project.pbxproj"
+      );
+
+      if (!fs.existsSync(pbxprojPath)) {
+        WebEngageLog.error("project.pbxproj not found. Run expo prebuild first.");
+        return config;
+      }
+
+      let pbxproj = fs.readFileSync(pbxprojPath, "utf8");
+
+      // Skip if already injected
+      if (pbxproj.includes(WE_SERVICE_EXT_SPM_URL)) {
+        WebEngageLog.log("WEServiceExtension SPM already present. Skipping.");
+        return config;
+      }
+
+      const crypto = require("crypto");
+
+      // UUIDs for service extension
+      const svcPkgRefUUID = crypto.createHash("md5").update("WE_SVC_PKG_REF").digest("hex").substring(0, 24).toUpperCase();
+      const svcProdDepUUID = crypto.createHash("md5").update("WE_SVC_PROD_DEP").digest("hex").substring(0, 24).toUpperCase();
+
+      // UUIDs for content extension
+      const cePkgRefUUID = crypto.createHash("md5").update("WE_CE_PKG_REF").digest("hex").substring(0, 24).toUpperCase();
+      const ceProdDepUUID = crypto.createHash("md5").update("WE_CE_PROD_DEP").digest("hex").substring(0, 24).toUpperCase();
+
+      // --- XCRemoteSwiftPackageReference entries ---
+      const svcPkgRef = `\t\t${svcPkgRefUUID} /* XCRemoteSwiftPackageReference "WEServiceExtension" */ = {
+\t\t\tisa = XCRemoteSwiftPackageReference;
+\t\t\trepositoryURL = "${WE_SERVICE_EXT_SPM_URL}";
+\t\t\trequirement = {
+\t\t\t\tkind = upToNextMajorVersion;
+\t\t\t\tminimumVersion = ${WE_SERVICE_EXT_VERSION};
+\t\t\t};
+\t\t};`;
+
+      const cePkgRef = `\t\t${cePkgRefUUID} /* XCRemoteSwiftPackageReference "WEContentExtension" */ = {
+\t\t\tisa = XCRemoteSwiftPackageReference;
+\t\t\trepositoryURL = "${WE_CONTENT_EXT_SPM_URL}";
+\t\t\trequirement = {
+\t\t\t\tkind = upToNextMajorVersion;
+\t\t\t\tminimumVersion = ${WE_CONTENT_EXT_VERSION};
+\t\t\t};
+\t\t};`;
+
+      // --- XCSwiftPackageProductDependency entries ---
+      const svcProdDep = `\t\t${svcProdDepUUID} /* WEServiceExtension */ = {
+\t\t\tisa = XCSwiftPackageProductDependency;
+\t\t\tpackage = ${svcPkgRefUUID} /* XCRemoteSwiftPackageReference "WEServiceExtension" */;
+\t\t\tproductName = WEServiceExtension;
+\t\t};`;
+
+      const ceProdDep = `\t\t${ceProdDepUUID} /* WEContentExtension */ = {
+\t\t\tisa = XCSwiftPackageProductDependency;
+\t\t\tpackage = ${cePkgRefUUID} /* XCRemoteSwiftPackageReference "WEContentExtension" */;
+\t\t\tproductName = WEContentExtension;
+\t\t};`;
+
+      // Insert XCRemoteSwiftPackageReference section
+      if (pbxproj.includes("/* Begin XCRemoteSwiftPackageReference section */")) {
+        pbxproj = pbxproj.replace(
+          "/* End XCRemoteSwiftPackageReference section */",
+          `${svcPkgRef}\n${cePkgRef}\n/* End XCRemoteSwiftPackageReference section */`
+        );
+      } else {
+        pbxproj = pbxproj.replace(
+          /(\n\/\* End XCBuildConfiguration section \*\/)/,
+          `$1\n\n/* Begin XCRemoteSwiftPackageReference section */\n${svcPkgRef}\n${cePkgRef}\n/* End XCRemoteSwiftPackageReference section */`
+        );
+      }
+
+      // Insert XCSwiftPackageProductDependency section
+      if (pbxproj.includes("/* Begin XCSwiftPackageProductDependency section */")) {
+        pbxproj = pbxproj.replace(
+          "/* End XCSwiftPackageProductDependency section */",
+          `${svcProdDep}\n${ceProdDep}\n/* End XCSwiftPackageProductDependency section */`
+        );
+      } else {
+        pbxproj = pbxproj.replace(
+          /(\n\/\* End XCRemoteSwiftPackageReference section \*\/)/,
+          `$1\n\n/* Begin XCSwiftPackageProductDependency section */\n${svcProdDep}\n${ceProdDep}\n/* End XCSwiftPackageProductDependency section */`
+        );
+      }
+
+      // Add packageReferences to PBXProject
+      if (pbxproj.includes("packageReferences = (")) {
+        pbxproj = pbxproj.replace(
+          /packageReferences = \(/,
+          `packageReferences = (\n\t\t\t\t${svcPkgRefUUID} /* XCRemoteSwiftPackageReference "WEServiceExtension" */,\n\t\t\t\t${cePkgRefUUID} /* XCRemoteSwiftPackageReference "WEContentExtension" */,`
+        );
+      } else {
+        pbxproj = pbxproj.replace(
+          /(isa = PBXProject;[\s\S]*?buildConfigurationList = [A-F0-9]+ \/\* .* \*\/;)/,
+          `$1\n\t\t\tpackageReferences = (\n\t\t\t\t${svcPkgRefUUID} /* XCRemoteSwiftPackageReference "WEServiceExtension" */,\n\t\t\t\t${cePkgRefUUID} /* XCRemoteSwiftPackageReference "WEContentExtension" */,\n\t\t\t);`
+        );
+      }
+
+      // Add packageProductDependencies to NotificationService target
+      const nseTargetRegex = new RegExp(
+        `(name = ${NSE_TARGET_NAME};\\s*productName = ${NSE_TARGET_NAME};)`,
+      );
+      if (nseTargetRegex.test(pbxproj)) {
+        pbxproj = pbxproj.replace(
+          nseTargetRegex,
+          `$1\n\t\t\tpackageProductDependencies = (\n\t\t\t\t${svcProdDepUUID} /* WEServiceExtension */,\n\t\t\t);`
+        );
+      }
+
+      // Add packageProductDependencies to NotificationViewController target
+      const ceTargetRegex = new RegExp(
+        `(name = ${CE_TARGET_NAME};\\s*productName = ${CE_TARGET_NAME};)`,
+      );
+      if (ceTargetRegex.test(pbxproj)) {
+        pbxproj = pbxproj.replace(
+          ceTargetRegex,
+          `$1\n\t\t\tpackageProductDependencies = (\n\t\t\t\t${ceProdDepUUID} /* WEContentExtension */,\n\t\t\t);`
+        );
+      }
+
+      fs.writeFileSync(pbxprojPath, pbxproj, "utf8");
+      WebEngageLog.log("✅ Injected WEServiceExtension & WEContentExtension SPM packages.");
+
+      return config;
+    },
+  ]);
+};
+
+function getProjectName(iosPath: string): string {
+  const files = fs.readdirSync(iosPath);
+  const xcodeproj = files.find((f: string) => f.endsWith(".xcodeproj"));
+  if (!xcodeproj) throw new Error("Could not find .xcodeproj in ios directory");
+  return xcodeproj.replace(/\.xcodeproj$/, "");
+}
+
 export const withWebEngageIos: ConfigPlugin<WebEngagePluginProps> = (
   config,
   props
@@ -380,6 +531,10 @@ export const withWebEngageIos: ConfigPlugin<WebEngagePluginProps> = (
   config = withWebEngageXcodeProject(config, props);
   config = withWebEngageXcodeProjectContentExtension(config, props);
   config = withEasManagedCredentials(config, props);
+
+  if (props?.useSPM) {
+    config = withWebEngageExtensionsSPM(config, props);
+  }
 
   return config;
 };

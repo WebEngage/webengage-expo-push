@@ -7,7 +7,12 @@ import {
 } from "./iosConstants";
 import { WebEngageLog } from "./WebEngageLog";
 
-export async function updatePodfile(iosPath: string) {
+export async function updatePodfile(iosPath: string, useSPM: boolean = false) {
+  if (useSPM) {
+    WebEngageLog.log("Using SPM for extensions. Skipping Podfile modifications.");
+    return;
+  }
+
   const podfile = await FileManager.readFile(`${iosPath}/Podfile`);
   const matches = podfile.match(NSE_PODFILE_REGEX);
 

@@ -27,13 +27,21 @@ export type WebEngagePluginProps = {
   iosCEFilePath?: string;
 
   licenseCode: string;
+
+  /**
+   * (optional) Use Swift Package Manager instead of CocoaPods for WEServiceExtension & WEContentExtension.
+   */
+  useSPM?: boolean;
 };
 
 export const WEBENGAGE_PLUGIN_PROPS: string[] = [
   "mode",
   "iPhoneDeploymentTarget",
   "iosNSEFilePath",
+  "iosCEFilePath",
   "licenseCode",
+  "devTeam",
+  "useSPM",
 ];
 
 export enum Mode {
