@@ -29,7 +29,11 @@ In your `app.json` or `app.config.js`, add the plugin under the `plugins` key an
       [
         "webengage-expo-push",
         {
-          "mode": "development"
+          "mode": "development",
+          "devTeam": "YOUR_APPLE_TEAM_ID",
+          "iPhoneDeploymentTarget": "15.1",
+          "nseTargetName": "NotificationService",
+          "ceTargetName": "NotificationViewController"
         }
       ]
     ]
@@ -37,13 +41,34 @@ In your `app.json` or `app.config.js`, add the plugin under the `plugins` key an
 }
 ```
 
-### Options:
+### Options (iOS):
 
-For iOS
+| Key                      | Description                                                                                                         | Required | Default                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------- |
+| `mode`                   | Push notification mode: `development` or `production`                                                               | ❌       | `"development"`                 |
+| `devTeam`                | Apple Developer Team ID (e.g. `"91SW8A37CR"`)                                                                       | ❌       | —                               |
+| `iPhoneDeploymentTarget` | Minimum iOS deployment target for the extensions (should match your Podfile)                                        | ❌       | `"15.1"`                        |
+| `iosNSEFilePath`         | Local path to a custom Notification Service Extension Swift file                                                    | ❌       | Built-in default                |
+| `iosCEFilePath`          | Local path to a custom Content Extension Swift file                                                                 | ❌       | Built-in default                |
+| `nseTargetName`          | Custom target name for the Notification Service Extension. Use if the default App ID is unavailable on Apple portal | ❌       | `"NotificationService"`         |
+| `ceTargetName`           | Custom target name for the Content Extension                                                                        | ❌       | `"NotificationViewController"` |
 
-| Key    | Description                                           | Required |
-| ------ | ----------------------------------------------------- | -------- |
-| `mode` | Push notification mode: `development` or `production` | ✅       |
+
+---
+
+## 💡 When to use `nseTargetName`
+
+If your default NSE App ID (e.g. `com.yourcompany.yourapp.NotificationService`) was previously deleted from the Apple Developer Portal and cannot be restored, you can set a custom target name:
+
+```json
+["webengage-expo-push", {
+  "mode": "production",
+  "devTeam": "YOUR_TEAM_ID",
+  "nseTargetName": "WENotificationService"
+}]
+```
+
+This will register the extension under `com.yourcompany.yourapp.WENotificationService` instead.
 
 ---
 

@@ -5,16 +5,12 @@ import { withWebEngageIos } from "./withWebEngageIos";
 import { validatePluginProps } from "../support/helpers";
 
 const withWebEngage: ConfigPlugin<WebEngagePluginProps> = (config, props) => {
-  // if props are undefined, throw error
-  if (!props) {
-    throw new Error(
-      "You are trying to use the WebEngage plugin without any props."
-    );
-  }
+  // default to empty object if no props provided
+  const pluginProps = props ?? {};
 
-  validatePluginProps(props);
+  validatePluginProps(pluginProps);
 
-  config = withWebEngageIos(config, props);
+  config = withWebEngageIos(config, pluginProps);
 
   return config;
 };

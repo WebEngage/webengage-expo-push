@@ -99,10 +99,7 @@ export type WebEngagePluginProps = {
    */
   useSPM?: boolean;
 
-  /**
-   * (optional) WebEngage license code. Not required for the push plugin.
-   */
-  licenseCode?: string;
+
 };
 
 export const WEBENGAGE_PLUGIN_PROPS: string[] = [
@@ -115,7 +112,7 @@ export const WEBENGAGE_PLUGIN_PROPS: string[] = [
   "disableNSE",
   "appGroupName",
   "useSPM",
-  "licenseCode",
+
   "devTeam",
   "mode",
 ];

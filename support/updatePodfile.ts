@@ -58,7 +58,7 @@ export async function updatePodfile(
       throw new Error(
         `[webengage-expo-push] "iosNSEExistingTarget" is true but target '${targetName}' was not found in the Podfile.\n\n` +
         `This happens when "webengage-expo-push" is listed AFTER the other plugin in app.json.\n` +
-        `Move "webengage-expo-push" BEFORE the plugin that creates the NSE target (e.g., onesignal-expo-plugin).`
+        `Move "webengage-expo-push" BEFORE the plugin that creates the NSE target.`
       );
     } else {
       // No existing target — create new one
