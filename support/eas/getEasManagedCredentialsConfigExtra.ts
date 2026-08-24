@@ -1,9 +1,39 @@
 import { ExpoConfig } from "@expo/config-types";
-import { CE_TARGET_NAME, NSE_TARGET_NAME } from "../iosConstants";
+import { getNseTargetName, getCeTargetName } from "../iosConstants";
+import { WebEngagePluginProps } from "../../types/types";
 
 export default function getEasManagedCredentialsConfigExtra(
-  config: ExpoConfig
+  config: ExpoConfig,
+  props?: WebEngagePluginProps
 ): { [k: string]: any } {
+  const nseTargetName = getNseTargetName(props?.iosNSETargetName);
+  const ceTargetName = getCeTargetName(props?.iosCETargetName);
+  const appGroupName = props?.appGroupName ?? `group.${config?.ios?.bundleIdentifier}.WEGNotificationGroup`;
+
+  const appExtensions: any[] = [
+    ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? []),
+  ];
+
+  // Add NSE extension entry (unless disabled)
+  if (!props?.disableNSE) {
+    appExtensions.push({
+      targetName: nseTargetName,
+      bundleIdentifier: `${config?.ios?.bundleIdentifier}.${nseTargetName}`,
+      entitlements: {
+        "com.apple.security.application-groups": [appGroupName],
+      },
+    });
+  }
+
+  // Add CE extension entry
+  appExtensions.push({
+    targetName: ceTargetName,
+    bundleIdentifier: `${config?.ios?.bundleIdentifier}.${ceTargetName}`,
+    entitlements: {
+      "com.apple.security.application-groups": [appGroupName],
+    },
+  });
+
   return {
     ...config.extra,
     eas: {
@@ -14,30 +44,7 @@ export default function getEasManagedCredentialsConfigExtra(
           ...config.extra?.eas?.build?.experimental,
           ios: {
             ...config.extra?.eas?.build?.experimental?.ios,
-            appExtensions: [
-              ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ??
-                []),
-              {
-                // keep in sync with native changes in NSE
-                targetName: NSE_TARGET_NAME,
-                bundleIdentifier: `${config?.ios?.bundleIdentifier}.${NSE_TARGET_NAME}`,
-                entitlements: {
-                  "com.apple.security.application-groups": [
-                    `group.${config?.ios?.bundleIdentifier}.WEGNotificationGroup`,
-                  ],
-                },
-              },
-              {
-                // keep in sync with native changes in CE
-                targetName: CE_TARGET_NAME,
-                bundleIdentifier: `${config?.ios?.bundleIdentifier}.${CE_TARGET_NAME}`,
-                entitlements: {
-                  "com.apple.security.application-groups": [
-                    `group.${config?.ios?.bundleIdentifier}.WEGNotificationGroup`,
-                  ],
-                },
-              },
-            ],
+            appExtensions,
           },
         },
       },
