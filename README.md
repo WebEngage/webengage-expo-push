@@ -73,9 +73,9 @@ This will register the extension under `com.yourcompany.yourapp.WENotificationSe
 
 ---
 
-## 🔀 Multiple Push Plugins (e.g., OneSignal + WebEngage)
+## 🔀 Multiple Push Plugins
 
-If another plugin (e.g., OneSignal) already creates a Notification Service Extension, use `iosNSEExistingTarget` to avoid conflicts.
+If another plugin already creates a Notification Service Extension, use `iosNSEExistingTarget` to avoid conflicts.
 
 **Important:** `webengage-expo-push` must be listed **BEFORE** the other plugin in the `plugins` array.
 
@@ -85,12 +85,10 @@ If another plugin (e.g., OneSignal) already creates a Notification Service Exten
 "plugins": [
   ["webengage-expo-push", {
     "iosNSEExistingTarget": true,
-    "iosNSETargetName": "OneSignalNotificationServiceExtension",
+    "iosNSETargetName": "OtherPluginNSETarget",
     "iosNSEFilePath": "./assets/NotificationService.swift"
   }],
-  ["onesignal-expo-plugin", {
-    "mode": "development"
-  }]
+  ["other-push-plugin", { ... }]
 ]
 ```
 
