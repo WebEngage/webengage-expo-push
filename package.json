@@ -1,6 +1,6 @@
 {
   "name": "webengage-expo-push",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Expo config plugin for integrating WebEngage Push Notifications into iOS apps, with support for configuration via app.json.",
   "main": "./app.plugin.js",
   "scripts": {

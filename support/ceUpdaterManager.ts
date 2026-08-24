@@ -2,21 +2,21 @@ import { FileManager } from "./FileManager";
 import {
   BUNDLE_SHORT_VERSION_TEMPLATE_REGEX,
   BUNDLE_VERSION_TEMPLATE_REGEX,
-  CE_TARGET_NAME,
+  getCeTargetName,
   GROUP_IDENTIFIER_TEMPLATE_REGEX,
 } from "./iosConstants";
 
-const entitlementsFileName = `NotificationViewController.entitlements`;
-const plistFileName = `NotificationViewController-Info.plist`;
+export default class CeUpdaterManager {
+  private cePath = "";
+  private targetName = "";
 
-export default class CEUpdaterManager {
-  private nsePath = "";
-  constructor(iosPath: string) {
-    this.nsePath = `${iosPath}/${CE_TARGET_NAME}`;
+  constructor(iosPath: string, customTargetName?: string) {
+    this.targetName = getCeTargetName(customTargetName);
+    this.cePath = `${iosPath}/${this.targetName}`;
   }
 
   async updateNSEEntitlements(groupIdentifier: string): Promise<void> {
-    const entitlementsFilePath = `${this.nsePath}/${entitlementsFileName}`;
+    const entitlementsFilePath = `${this.cePath}/${this.targetName}.entitlements`;
     let entitlementsFile = await FileManager.readFile(entitlementsFilePath);
 
     entitlementsFile = entitlementsFile.replace(
@@ -27,14 +27,14 @@ export default class CEUpdaterManager {
   }
 
   async updateNSEBundleVersion(version: string): Promise<void> {
-    const plistFilePath = `${this.nsePath}/${plistFileName}`;
+    const plistFilePath = `${this.cePath}/${this.targetName}-Info.plist`;
     let plistFile = await FileManager.readFile(plistFilePath);
     plistFile = plistFile.replace(BUNDLE_VERSION_TEMPLATE_REGEX, version);
     await FileManager.writeFile(plistFilePath, plistFile);
   }
 
   async updateNSEBundleShortVersion(version: string): Promise<void> {
-    const plistFilePath = `${this.nsePath}/${plistFileName}`;
+    const plistFilePath = `${this.cePath}/${this.targetName}-Info.plist`;
     let plistFile = await FileManager.readFile(plistFilePath);
     plistFile = plistFile.replace(BUNDLE_SHORT_VERSION_TEMPLATE_REGEX, version);
     await FileManager.writeFile(plistFilePath, plistFile);
