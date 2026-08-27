@@ -29,10 +29,7 @@ In your `app.json` or `app.config.js`, add the plugin under the `plugins` key an
       [
         "webengage-expo-push",
         {
-          "mode": "development",
-          "iPhoneDeploymentTarget": "15.1",
-          "nseTargetName": "NotificationService",
-          "ceTargetName": "NotificationViewController"
+          "mode": "development"
         }
       ]
     ]
